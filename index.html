@@ -1,0 +1,741 @@
+<!DOCTYPE html> 
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Carta Secreta by myeya</title>
+  
+  <!-- Fuentes de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;700&family=Quicksand:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-color: #fce4ec;
+      --card-bg: rgba(255, 240, 246, 0.95);
+      --border-color: #f8bbd0;
+      --text-color: #4a4a4a;
+      --accent-color: #d81b60;
+    }
+
+    /* Tema Modo Noche / Luz de Velas */
+    body.night-mode {
+      --bg-color: #1a0913;
+      --card-bg: rgba(35, 18, 28, 0.95);
+      --border-color: #880e4f;
+      --text-color: #fce4ec;
+      --accent-color: #f48fb1;
+    }
+
+    body {
+      font-family: 'Quicksand', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      overflow-x: hidden;
+      position: relative;
+      transition: background-color 0.5s ease;
+    }
+
+    /* Canvas para el fondo interactivo */
+    #bgCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Botón de Modo Noche */
+    .theme-toggle {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      z-index: 100;
+      background: var(--card-bg);
+      border: 2px solid var(--border-color);
+      font-size: 20px;
+      padding: 8px 12px;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .theme-toggle:active { transform: scale(0.9); }
+
+    .screen {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+      position: relative;
+      z-index: 1;
+    }
+    .active { display: flex; }
+    .password-screen { flex-direction: column; }
+
+    /* Tarjeta de Clave */
+    .lock-card {
+      background: var(--card-bg);
+      border: 3px solid var(--border-color);
+      padding: 30px 20px;
+      border-radius: 25px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      max-width: 360px;
+      width: 90%;
+      backdrop-filter: blur(8px);
+    }
+    .lock-icon { font-size: 35px; margin-bottom: 5px; }
+    .hint-text {
+      font-size: 14px;
+      color: var(--accent-color);
+      margin-top: -5px;
+      margin-bottom: 15px;
+      font-family: 'Quicksand', sans-serif;
+    }
+    .error-msg {
+      font-size: 13px;
+      color: #e53935;
+      height: 20px;
+      margin-top: 5px;
+      font-family: 'Quicksand', sans-serif;
+      font-weight: bold;
+    }
+
+    /* Teclado numérico */
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      gap: 10px;
+      margin-top: 15px;
+      justify-content: center;
+    }
+    .key {
+      background-color: var(--border-color);
+      border: none;
+      border-radius: 12px;
+      font-size: 20px;
+      padding: 15px;
+      cursor: pointer;
+      backdrop-filter: blur(4px);
+      transition: background 0.2s, transform 0.1s;
+      color: #333;
+    }
+    .key:hover { background-color: #f48fb1; }
+    .key-heart { font-size: 20px; }
+    .key-delete { background-color: #f48fb1; font-size: 18px; }
+    .input-display { font-size: 24px; margin-top: 10px; letter-spacing: 6px; }
+
+    /* Libreta y Carta */
+    .notepad {
+      background-color: var(--card-bg);
+      border: 3px solid var(--border-color);
+      padding: 30px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 520px;
+      text-align: left;
+      font-family: 'Dancing Script', cursive;
+      font-size: 22px;
+      line-height: 1.6;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      animation: popIn 0.8s ease;
+      backdrop-filter: blur(6px);
+      margin-bottom: 80px;
+    }
+    .notepad h3 { margin-top: 0; font-size: 28px; }
+    .notepad h4 { font-size: 26px; margin-bottom: 15px; }
+
+    /* Contador de tiempo */
+    .counter-box {
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px dashed var(--accent-color);
+      border-radius: 12px;
+      padding: 15px;
+      text-align: center;
+      margin: 20px 0;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 14px;
+    }
+    .counter-timer {
+      font-size: 18px;
+      font-weight: bold;
+      margin-top: 5px;
+      color: var(--accent-color);
+    }
+
+    /* Polaroid */
+    .polaroid {
+      background: white;
+      color: #333;
+      padding: 12px 12px 20px 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      border-radius: 4px;
+      margin: 25px auto;
+      width: 85%;
+      text-align: center;
+      transition: transform 0.3s ease;
+    }
+    .polaroid-1 { transform: rotate(-2deg); }
+    .polaroid-2 { transform: rotate(2deg); }
+    .polaroid:hover { transform: rotate(0deg) scale(1.03); }
+    .polaroid img {
+      width: 100%;
+      max-height: 260px;
+      object-fit: cover;
+      border-radius: 2px;
+    }
+    .polaroid-caption {
+      font-family: 'Dancing Script', cursive;
+      font-size: 20px;
+      margin-top: 10px;
+    }
+
+    /* Rasca y Gana */
+    .scratch-container {
+      position: relative;
+      width: 100%;
+      height: 100px;
+      margin: 20px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 2px solid var(--border-color);
+    }
+    .scratch-secret {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #fff0f6;
+      color: #ad1457;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #scratchCanvas {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    /* Cupones */
+    .coupons-title {
+      font-family: 'Quicksand', sans-serif;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 30px;
+      color: var(--accent-color);
+    }
+    .coupon {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px dashed var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 10px 0;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    .coupon.redeemed {
+      background: rgba(200, 200, 200, 0.2);
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+
+    /* Botón "Si me extrañas" */
+    .miss-you-box { text-align: center; margin: 25px 0; }
+    .btn-miss-you {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 25px;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(216, 27, 96, 0.3);
+      transition: transform 0.2s;
+    }
+    .btn-miss-you:active { transform: scale(0.95); }
+    .miss-you-message {
+      margin-top: 12px;
+      font-size: 18px;
+      min-height: 40px;
+      color: var(--accent-color);
+    }
+
+    /* Reproductor flotante */
+    .music-player {
+      position: fixed;
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 400px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid var(--border-color);
+      border-radius: 30px;
+      padding: 8px 15px;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+      backdrop-filter: blur(10px);
+      z-index: 99;
+      color: #333;
+    }
+    .music-player img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      animation: spin 6s linear infinite;
+      animation-play-state: paused;
+    }
+    .music-player.playing img { animation-play-state: running; }
+    .music-info { flex-grow: 1; text-align: left; font-family: 'Quicksand', sans-serif; }
+    .music-title { font-size: 13px; font-weight: bold; }
+    .music-sub { font-size: 11px; color: #666; }
+    .music-btn {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    /* Animaciones */
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+    .pulse-animation { animation: pulse 0.4s ease-in-out; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-animation { animation: shake 0.4s ease-in-out; }
+
+    @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    .floating-heart {
+      position: fixed;
+      top: -20px;
+      user-select: none;
+      pointer-events: none;
+      z-index: 1000;
+      animation: fall linear infinite;
+    }
+    @keyframes fall { to { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
+  </style>
+</head>
+<body>
+
+<!-- Canvas del Fondo Interactivo -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- Botón Modo Noche / Vela -->
+<button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🕯️</button>
+
+<div id="passwordScreen" class="screen password-screen active">
+  <div class="lock-card">
+    <div class="lock-icon">🔒</div>
+    <h2>Cofre de Recuerdos</h2>
+    <p class="hint-text">Ingresa la fecha en la que comenzó nuestra historia ♡</p>
+    
+    <div class="input-display" id="inputDisplay">♡ ♡ ♡ ♡</div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="keypad" id="keypadBox">
+      <button class="key" onclick="enterDigit('1')">1</button>
+      <button class="key" onclick="enterDigit('2')">2</button>
+      <button class="key" onclick="enterDigit('3')">3</button>
+      <button class="key" onclick="enterDigit('4')">4</button>
+      <button class="key" onclick="enterDigit('5')">5</button>
+      <button class="key" onclick="enterDigit('6')">6</button>
+      <button class="key" onclick="enterDigit('7')">7</button>
+      <button class="key" onclick="enterDigit('8')">8</button>
+      <button class="key" onclick="enterDigit('9')">9</button>
+      <button class="key key-heart" onclick="triggerHeartBeat()">💖</button>
+      <button class="key" onclick="enterDigit('0')">0</button>
+      <button class="key key-delete" onclick="deleteDigit()">⌫</button>
+    </div>
+  </div>
+</div>
+
+<div id="notepadScreen" class="screen">
+  <div class="notepad">
+    <h3>📅 19 Octubre 2026</h3>
+    <h4>💌 Mi Querida Nico Nico Ni ♡</h4>
+    
+    <!-- Contador de Tiempo -->
+    <div class="counter-box">
+      <span>Me encanta ver cómo nuestro contador sigue sumando días, risas y un amor que no deja de crecer</span>
+      <div class="counter-timer" id="timeTogether">Cargando tiempo...</div>
+    </div>
+
+    <!-- Primera Polaroid -->
+    <div class="polaroid polaroid-1">
+      <img src="foto1.jpeg" alt="Nuestro recuerdo">
+      <div class="polaroid-caption">La foto que inició nuestra historia ♡</div>
+    </div>
+
+    <p>
+      Mai Lov, quién diría que el tiempo pasa tan rápido, aún recuerdo cuando nos conocimos y nos hablamos
+      por primera vez, yo todo tímido y con miedo de interactuar no di opiniones y al final simplemente dijimos lo de la zapatilla blanca 😅.
+      Quién diría que aquellos jóvenes que se conocieron de una manera tan simple, terminarían siendo tan importantes el uno para el otro.
+      Y sí, para mí te has convertido en alguien muy especial, alguien a la que le tengo un cariño inmenso y que me hace sentir cosas que nunca antes había sentido.
+      Quería decirte lo feliz que me hace tenerte en mi vida, y que cada día que pasa no paro de darme cuenta de lo afortunado que soy al tenerte. Y como dice la canción:
+    </p>
+    
+    <p style="text-align: center;">
+      Quiero que sean tus labios<br>
+      Los que me enseñen a besar<br>
+      Quiero que sea en tus aguas<br>
+      En las que yo aprenda a nadar<br>
+      Quiero que sean tus brazos<br>
+      Los que me enseñen a abrazar<br>
+      Y las marcas de mi pasado<br>
+      Contigo las pueda borrar<br>
+      Yo quiero ser tu aprendiz<br>
+      Y que seas tú la que me enseñe a amar
+    </p>
+
+    <!-- Rasca y Gana -->
+    <p style="font-size:16px; font-family:'Quicksand'; text-align:center; margin-bottom: 5px;">Desenvuelve aquí el secreto que guarda mi corazón por ti. ✨</p>
+    <div class="scratch-container">
+      <div class="scratch-secret">"Sé que somos jóvenes y que no llevamos mucho tiempo juntos, pero el sentimiento que tengo por ti es tan grande que no puedo dejar de expresarlo, te quiero inmensamente y quiero estar a tu lado, en las buenas, en las malas y en cada momento especial."</div>
+      <canvas id="scratchCanvas"></canvas>
+    </div>
+
+    <p>
+      A tu lado estoy aprendiendo lo que es el amor verdadero, aquel que se demuestra con acciones, con palabras sinceras
+      y con esos pequeños detalles que hacen la diferencia. Gracias por hacerme sentir amado y por estar siempre conmigo, por darme tu
+      tiempo, tu cariño y tu comprensión.
+    </p>
+
+    <!-- Segunda Polaroid -->
+    <div class="polaroid polaroid-2">
+      <img src="foto2.jpeg" alt="Te amo">
+      <div class="polaroid-caption">Cada segundo a tu lado es un regalo y solo deseo que la vida nos regale muchos momentos más juntos</div>
+    </div>
+
+    <p>
+      Las palabras no son suficientes para expresar lo que siento por ti, pero quiero que sepas que cada día que pasa mi amor por ti crece más y más.
+      Eres mi alegría diaria y la razón de mis sonrisas. Gracias por ser tú, por ser mi compañera, mi amiga y mi amor. No importa lo que el futuro nos depare, siempre estaré a tu lado, apoyándote y amándote con todo mi corazón.
+    </p>
+    <p style="text-align: center;">
+      Te amo profundamente. ♡
+    </p>
+
+    <!-- Botón "Si me extrañas" -->
+    <div class="miss-you-box">
+      <button class="btn-miss-you" onclick="showRandomReason()">¡Peligro! Alto contenido de cursilería si presionas aquí ⚠️</button>
+      <div class="miss-you-message" id="missYouMsg"></div>
+    </div>
+
+    <!-- Cupones de Amor -->
+    <div class="coupons-title">Toma un cupón de felicidad (Válido hoy y para otras oportunidades) 🎫</div>
+    <div class="coupon" onclick="redeemCoupon(this)">
+      <span>Vale por una noche de engreimiento total</span>
+      <span>Reclamar Premio 💝</span>
+    </div>
+    <div class="coupon" onclick="redeemCoupon(this)">
+      <span>Cheque en blanco de besos</span>
+      <span>Reclamar Premio 💝</span>
+    </div>
+    <div class="coupon" onclick="redeemCoupon(this)">
+      <span>Vale por un abrazo infinito</span>
+      <span>Reclamar Premio 💝</span>
+    </div>
+  </div>
+</div>
+
+<!-- Reproductor Flotante -->
+<div class="music-player" id="musicPlayer">
+  <img src="foto1.jpeg" alt="Cover" id="playerImg">
+  <div class="music-info">
+    <div class="music-title">Nuestra Canción Especial</div>
+    <div class="music-sub">Te dedico esta canción Mai Lov ♡</div>
+  </div>
+  <button class="music-btn" onclick="togglePlayPause()" id="playPauseBtn">⏸️</button>
+</div>
+
+<!-- Elemento de Audio -->
+<audio id="bgMusic" loop>
+  <source src="musica.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+  const correctPassword = '1909';
+  let input = '';
+
+  // Fecha de inicio de la relación (Año, Mes 0-11, Día, Hora, Minuto)
+  const startDate = new Date(2026, 8, 19, 0, 0, 0); 
+
+  const reasons = [
+    "Eres la razón por la que sonrío todos los días. 💕",
+    "Me encanta la forma en la que me cuidas y me escuchas. 💕",
+    "Recuerda que estoy a solo un mensaje o una llamada de ti. 📞",
+    "No importa lo lejos que estemos, siempre estás en mi mente. 🧠💖",
+    "Eres mi lugar seguro y mi persona favorita. 🏠✨",
+    "¡Te mando un abrazo súper apretado desde aquí! 🤗",
+    "Eres la reina de mi corazón y la dueña de mis pensamientos. 👑❤️",
+  ];
+
+  function enterDigit(digit) {
+    if (input.length < 4) { input += digit; }
+    updateDisplay();
+
+    if (input.length === 4) {
+      if (input === correctPassword) {
+        document.getElementById('passwordScreen').classList.remove('active');
+        document.getElementById('notepadScreen').classList.add('active');
+        document.getElementById('musicPlayer').style.display = 'flex';
+        
+        const music = document.getElementById('bgMusic');
+        music.play().then(() => {
+          document.getElementById('musicPlayer').classList.add('playing');
+        }).catch(e => console.log("Audio block:", e));
+
+        createHeartShower();
+        startCounter();
+        initScratchCard();
+      } else {
+        const keypad = document.getElementById('keypadBox');
+        const errorMsg = document.getElementById('errorMsg');
+        
+        keypad.classList.add('shake-animation');
+        errorMsg.innerText = "Contraseña incorrecta amor 💕 ¡Intenta de nuevo!";
+        
+        setTimeout(() => keypad.classList.remove('shake-animation'), 400);
+
+        input = '';
+        setTimeout(() => updateDisplay(), 600);
+      }
+    }
+  }
+
+  function deleteDigit() {
+    if (input.length > 0) {
+      input = input.slice(0, -1);
+      updateDisplay();
+    }
+  }
+
+  function updateDisplay() {
+    const display = document.getElementById('inputDisplay');
+    let filled = '❤️ '.repeat(input.length);
+    let empty = '♡ '.repeat(4 - input.length);
+    display.textContent = (filled + empty).trim();
+  }
+
+  function triggerHeartBeat() {
+    const heartBtn = document.querySelector('.key-heart');
+    heartBtn.classList.add('pulse-animation');
+    setTimeout(() => heartBtn.classList.remove('pulse-animation'), 400);
+  }
+
+  function createHeartShower() {
+    const hearts = ['💖', '💕', '🌸', '✨', '❤️'];
+    for (let i = 0; i < 35; i++) {
+      setTimeout(() => {
+        const heart = document.createElement('div');
+        heart.classList.add('floating-heart');
+        heart.innerText = hearts[Math.floor(Math.random() * hearts.length)];
+        heart.style.left = Math.random() * 100 + 'vw';
+        heart.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        heart.style.fontSize = (Math.random() * 15 + 15) + 'px';
+        document.body.appendChild(heart);
+
+        setTimeout(() => heart.remove(), 5000);
+      }, i * 120);
+    }
+  }
+
+  function startCounter() {
+    function updateTimer() {
+      const now = new Date();
+      const diff = now - startDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / 1000 / 60) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+
+      document.getElementById('timeTogether').innerText = 
+        `${days} días, ${hours}h ${minutes}m ${seconds}s`;
+    }
+    updateTimer();
+    setInterval(updateTimer, 1000);
+  }
+
+  function showRandomReason() {
+    const random = reasons[Math.floor(Math.random() * reasons.length)];
+    const msgBox = document.getElementById('missYouMsg');
+    msgBox.style.opacity = 0;
+    setTimeout(() => {
+      msgBox.innerText = random;
+      msgBox.style.opacity = 1;
+    }, 200);
+  }
+
+  function redeemCoupon(element) {
+    if (!element.classList.contains('redeemed')) {
+      element.classList.add('redeemed');
+      element.querySelector('span:last-child').innerText = "¡Canjeado! ✅";
+    }
+  }
+
+  function togglePlayPause() {
+    const music = document.getElementById('bgMusic');
+    const player = document.getElementById('musicPlayer');
+    const btn = document.getElementById('playPauseBtn');
+
+    if (music.paused) {
+      music.play();
+      player.classList.add('playing');
+      btn.innerText = "⏸️";
+    } else {
+      music.pause();
+      player.classList.remove('playing');
+      btn.innerText = "▶️";
+    }
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle('night-mode');
+    const btn = document.getElementById('themeBtn');
+    if (document.body.classList.contains('night-mode')) {
+      btn.innerText = "☀️";
+    } else {
+      btn.innerText = "🕯️";
+    }
+  }
+
+  function initScratchCard() {
+    const canvas = document.getElementById('scratchCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    ctx.fillStyle = '#f48fb1';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.font = '16px Quicksand';
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText('✨ Rasca aquí ✨', canvas.width / 2, canvas.height / 2 + 5);
+
+    let isDrawing = false;
+
+    function scratch(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = (e.clientX || e.touches[0].clientX) - rect.left;
+      const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    canvas.addEventListener('mousedown', () => isDrawing = true);
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mousemove', scratch);
+
+    canvas.addEventListener('touchstart', () => isDrawing = true);
+    canvas.addEventListener('touchend', () => isDrawing = false);
+    canvas.addEventListener('touchmove', scratch);
+  }
+
+  // Fondo interactivo
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  const particles = [];
+  const mouse = { x: null, y: null, radius: 100 };
+
+  window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches.length > 0) {
+      mouse.x = e.touches[0].clientX;
+      mouse.y = e.touches[0].clientY;
+    }
+  });
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.size = Math.random() * 5 + 2;
+      this.speedX = Math.random() * 1 - 0.5;
+      this.speedY = Math.random() * 1 - 0.5;
+      this.color = `rgba(244, 143, 177, ${Math.random() * 0.5 + 0.3})`;
+    }
+
+    update() {
+      this.x += this.speedX;
+      this.y += this.speedY;
+
+      if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+      if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+
+      if (mouse.x && mouse.y) {
+        let dx = mouse.x - this.x;
+        let dy = mouse.y - this.y;
+        let distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < mouse.radius) {
+          this.x -= dx * 0.03;
+          this.y -= dy * 0.03;
+        }
+      }
+    }
+
+    draw() {
+      ctx.fillStyle = this.color;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 45; i++) { particles.push(new Particle()); }
+
+  function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(animateParticles);
+  }
+  animateParticles();
+</script>
+</body>
+</html>
